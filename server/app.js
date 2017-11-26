@@ -11,8 +11,10 @@ const PORT = process.env.PORT || 8080;
 app.use(bodyParser.json());
 
 app.post('/todos', function(req, res){
-  var newTodo = new Todo();
-  newTodo.text = req.body.text;
+  var newTodo = new Todo({
+    text: req.body.text
+  });
+
   console.log("body.text = "+req.body.text);
   console.log("req.body = "+req.body);
   newTodo.save().then((doc) => {
@@ -20,6 +22,16 @@ app.post('/todos', function(req, res){
   }, (e) => {
     res.status(400).send(e)
   });
+});
+
+app.get('/todos', function(req, res){
+  Todo.find().then( (todos) => {
+    res.send({
+      todos: todos
+    });
+  }, (e) => {
+    res.status(400).send(e);
+  })
 });
 
 app.get('/todos', function(req, res){
