@@ -1,8 +1,10 @@
+const _ = require('lodash');
 const {mongoose} = require('./db/mongoose');
 const {Todo} = require('./model/Todo');
 const {user} = require('./model/User');
 const bodyParser = require('body-parser'); // conert text to JSOn
 const express = require('express');
+const mongodb = require('mongodb');
 
 const app = express();
 
@@ -14,9 +16,6 @@ app.post('/todos', function(req, res){
   var newTodo = new Todo({
     text: req.body.text
   });
-
-  console.log("body.text = "+req.body.text);
-  console.log("req.body = "+req.body);
   newTodo.save().then((doc) => {
     res.send(doc);
   }, (e) => {
@@ -34,8 +33,54 @@ app.get('/todos', function(req, res){
   })
 });
 
-app.get('/todos', function(req, res){
-  res.sendStatus(JSON.stringify({status: 200}));
+
+app.get('/todos/:id', function(req, res){
+  var id = req.params.id;
+  Todo.find({_id: id}).then((todo) => {
+    if(!todo){
+      res.status(404).send();
+    }
+      res.send({todo});
+  }, (err) => {
+      res.status(404).send();
+  });
+});
+
+app.delete('/todos/:id', function(req, res){
+
+  var id = req.params.id;
+  // validate the id
+  Todo.findByIdAndRemove({_id: id}).then( (todo) => {
+    if(!todo){
+      res.status(404).send();
+    }
+    else{
+      res.send(todo);
+    }
+  }, (err) => {
+    res.status(404).end();
+  })
+});
+
+app.patch('/todos/:id', function(req, res){
+
+  var id =  req.params.id;
+  var body = _.pick(req.body, ['completed', 'text']);
+
+  if(_.isBoolean(body.completed) && body.completed){
+    body.completedAt = new Date().getTime();
+  } else{
+    body.completedAt = null;
+    body.completed = false;
+  }
+  Todo.findByIdAndUpdate(id, {$set: body}, {new: true}).then( (todo) => {
+    if(!todo){
+        res.status(404).send();
+    }
+    res.send({todo});
+  }, (err) => {
+      res.status(404).send();
+  });
 });
 
 app.listen(PORT, function() {
