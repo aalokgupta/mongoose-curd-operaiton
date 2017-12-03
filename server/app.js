@@ -1,17 +1,35 @@
 const _ = require('lodash');
 const {mongoose} = require('./db/mongoose');
 const {Todo} = require('./model/Todo');
-const {user} = require('./model/User');
+const {User} = require('./model/User');
 const bodyParser = require('body-parser'); // conert text to JSOn
 const express = require('express');
 const mongodb = require('mongodb');
-
+const {authenticateUser} = require('./middleware/authenticate');
 const app = express();
 
 const PORT = process.env.PORT || 8080;
 
 app.use(bodyParser.json());
 
+app.post('/user', function(req, res) {
+  var body = _.pick(req.body, ['email', 'password']);
+  console.log("body requested = "+JSON.stringify(req.body));
+  var newUser = new User(body);
+
+  newUser.save().then(() => {
+    newUser.generateAuthTokens(function(token){
+          res.header('x-auth', token).send(newUser);
+    });
+  }).catch((err) => {
+    res.status(400).send(err);
+  });
+});
+
+
+app.get('/user/me', authenticateUser, function(req, res){
+  res.send(req.user);
+});
 app.post('/todos', function(req, res){
   var newTodo = new Todo({
     text: req.body.text
